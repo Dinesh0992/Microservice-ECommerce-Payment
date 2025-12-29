@@ -1,0 +1,38 @@
+How to Run the Project
+1. Prerequisites
+
+Docker Desktop (for RabbitMQ & SQL Server)
+
+.NET 10 SDK
+
+VS Code "Live Server" Extension
+
+2. Infrastructure Setup
+
+Bash
+
+# Start RabbitMQ and SQL Server
+docker-compose up -d
+3. Running the Services
+
+Order Service:
+
+cd Order.Service
+
+dotnet ef database update
+
+dotnet run (Running on port 5170)
+
+Payment Service:
+
+cd Payment.Service
+
+dotnet run
+
+4. Running the Frontend
+
+Open index.html in VS Code.
+
+Click Go Live (Bottom right status bar).
+
+Ensure the browser URL is http://127.0.0.1:5500.

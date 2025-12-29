@@ -122,3 +122,36 @@ CORS: Configured Cross-Origin Resource Sharing in the Order Service to allow the
 Configuration: Synchronized Razorpay Key/Secret across microservices via appsettings.json.
 
 Next Session Goal: Replace the JavaScript polling loop in the UI with SignalR for real-time server-to-client notifications.
+
+
+Today's Achievements (December 29, 2025)
+Real-Time Bridge (SignalR): Successfully integrated SignalR Hubs into the Order.Service to replace polling.
+
+Event-Driven UI: Refactored the Frontend JavaScript to listen for backend "Pushes" using the SignalR client library.
+
+Security & Scoping: Implemented SignalR Groups so that payment notifications are sent securely only to the specific client that placed the order.
+
+Transactional Outbox Pattern: Confirmed the implementation of the Outbox Pattern using MassTransit and EF Core, ensuring 100% message reliability between SQL Server and RabbitMQ.
+
+End-to-End Success: Verified the full distributed flow: Frontend -> Order.Service -> RabbitMQ -> Payment.Service -> Razorpay API -> RabbitMQ -> Order.Service -> SignalR -> Frontend Popup.
+
+🚀 To-Do List (Tomorrow's Goals)
+1. Handling User Interruptions (Cancellations)
+Implement the modal.ondismiss callback in the frontend.
+
+Create a CancelOrder endpoint in the Order.Service to handle users who manually close the Razorpay window.
+
+2. User Experience (UX) Finalization
+Success Redirect: Replace the browser alert() with a dedicated success.html landing page.
+
+Loading States: Add a visual spinner/loading indicator while the microservices are coordinating the Razorpay ID generation.
+
+3. System Self-Healing (The "Janitor" Service)
+Develop a Background Hosted Service in .NET to act as a "Janitor."
+
+Logic: Automatically scan the database for orders stuck in PaymentInitiated for over 30 minutes (due to browser crashes or tab closures) and mark them as TimedOut.
+
+4. Logging & Cleanup
+Adjust appsettings.json log levels to reduce EF Core background noise.
+
+Final code refactoring for production-ready "Clean Architecture."
