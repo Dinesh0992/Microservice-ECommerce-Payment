@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Order.Service.Data;
 using ECommerce.Contracts;
 using Order.Service.Consumers;
+using Order.Service.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,11 +55,17 @@ builder.Services.AddMassTransit(x =>
 builder.Services.AddOptions<MassTransitHostOptions>()
     .Configure(options => options.WaitUntilStarted = true);
 
+builder.Services.AddSignalR();
+
+// Fetch the URL from appsettings
+var frontendUrl = builder.Configuration["FrontendSettings:Url"] ?? "http://127.0.0.1:5500";
+
 builder.Services.AddCors(options => {
     options.AddDefaultPolicy(policy => {
-        policy.AllowAnyOrigin() // In production, specify your domain
+        policy.WithOrigins(frontendUrl) 
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -70,7 +77,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseRouting(); // Important: Define routing before CORS
 app.UseCors();
 app.MapControllers();
+app.MapHub<OrderHub>("/orderHub");
 app.Run();
