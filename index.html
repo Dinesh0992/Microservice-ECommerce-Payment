@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Microservices Checkout</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; background: #f0f2f5; }
+        .box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 300px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; font-weight: bold; cursor: pointer; }
+        #msg { font-size: 0.8rem; color: #555; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h3>E-Shop Payment</h3>
+        <input type="email" id="email" placeholder="Email" value="test@example.com">
+        <input type="number" id="amount" placeholder="Amount" value="500">
+        <button id="payBtn">CREATE & PAY</button>
+        <div id="msg"></div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5170/api/Orders"; // Check your Order Service Port
+        const RZP_KEY = "rzp_test_RwfRliWpgJyiG6"; // Replace with your actual Razorpay Key ID
+
+        document.getElementById('payBtn').onclick = async function() {
+            const msg = document.getElementById('msg');
+            const email = document.getElementById('email').value;
+            const amount = document.getElementById('amount').value;
+
+            try {
+                // STEP 1: Create Order in Order Service
+                msg.innerText = "Creating order...";
+                const res = await fetch(`${API_URL}/CreateOrder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: parseFloat(amount), customerEmail: email })
+                });
+                const { orderId } = await res.json();
+
+                // STEP 2: Poll for RazorpayOrderId
+                // Since Payment Service works in background, we check every 2 seconds
+                let razorId = null;
+                msg.innerText = "Connecting to Payment Service...";
+
+                while (!razorId) {
+                    await new Promise(r => setTimeout(r, 2000)); 
+                    const check = await fetch(`${API_URL}/GetOrder/${orderId}`);
+                    const orderData = await check.json();
+                    
+                    if (orderData.razorpayOrderId) {
+                        razorId = orderData.razorpayOrderId;
+                    }
+                }
+
+                // STEP 3: Open Razorpay
+                msg.innerText = "Opening Gateway...";
+                const options = {
+                    "key": RZP_KEY,
+                    "amount": amount * 100,
+                    "order_id": razorId,
+                    "handler": async function (resp) {
+                        // STEP 4: Confirm Payment
+                        const confirm = await fetch(`${API_URL}/ConfirmPayment`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                razorpayOrderId: resp.razorpay_order_id,
+                                razorpayPaymentId: resp.razorpay_payment_id,
+                                razorpaySignature: resp.razorpay_signature
+                            })
+                        });
+                        const result = await confirm.json();
+                        alert(result.message);
+                        location.reload();
+                    }
+                };
+                new Razorpay(options).open();
+
+            } catch (e) {
+                alert("Error: " + e.message);
+            }
+        };
+    </script>
+</body>
+</html>
