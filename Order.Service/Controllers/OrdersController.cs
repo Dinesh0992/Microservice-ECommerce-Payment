@@ -101,6 +101,30 @@ public class OrdersController : ControllerBase
 
         return Ok(order);
     }
+
+    [HttpPost("{orderId}")] // Added "{orderId}" to accept the ID from the URL path
+    public async Task<IActionResult> CancelOrder(Guid orderId) 
+    {
+        // 1. Find the order using Guid
+        var order = await _dbContext.Orders.FindAsync(orderId);
+
+        if (order == null)
+        {
+            return NotFound(new { message = "Order not found" });
+        }
+
+        // 2. Security Check
+        if (order.Status == "PaymentInitiated" || order.Status == "Pending")
+        {
+            order.Status = "Cancelled";
+            await _dbContext.SaveChangesAsync();
+
+            Console.WriteLine($"[STATUS UPDATE] Order {orderId} has been cancelled by user.");
+            return Ok(new { message = "Order cancelled" });
+        }
+
+        return BadRequest(new { message = "Order cannot be cancelled at this stage." });
+    }
 }
 
 public record OrderRequest(decimal Amount, string CustomerEmail);

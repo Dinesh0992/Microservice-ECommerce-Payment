@@ -4,6 +4,7 @@ using Order.Service.Data;
 using ECommerce.Contracts;
 using Order.Service.Consumers;
 using Order.Service.Hubs;
+using Order.Service.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +69,8 @@ builder.Services.AddCors(options => {
               .AllowCredentials();
     });
 });
+
+builder.Services.AddHostedService<PaymentTimeoutWorker>();
 
 var app = builder.Build();
 
