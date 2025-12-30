@@ -64,7 +64,7 @@ public class OrdersController : ControllerBase
         try
         {
             // 1. Get your secret
-            string secret = _configuration["Razorpay:Secret"] ?? "YOUR_SECRET_HERE";
+            string secret = _configuration["Razorpay:KeySecret"] ?? "YOUR_SECRET_HERE";
 
             // 2. Manually construct the payload as Razorpay expects: "order_id|payment_id"
             // This is exactly what the internal SDK code does.

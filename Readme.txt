@@ -35,6 +35,22 @@ Start Order Service:
   cd Order.Service && dotnet run
 
 ================================================================================
+2.1 UPDATED STARTUP COMMANDS (DOCKER)
+================================================================================
+
+Launch entire ecosystem:
+  docker compose up -d --build
+
+View service logs:
+  docker compose logs -f
+
+Stop services (keep data):
+  docker compose down
+
+Stop services (wipe data/volumes):
+  docker compose down -v
+
+================================================================================
 3. DEVELOPMENT GOALS
 ================================================================================
 
@@ -186,6 +202,17 @@ UX Finalization:
   Replaced browser alerts with success redirect to success.html
   Passes OrderId through URL for professional confirmation experience
 
+Full System Containerization (Docker Compose):
+  Orchestrated the entire ecosystem (Order Service, Payment Service, SQL Server, and RabbitMQ) into a unified Docker Compose environment.
+  Implemented YAML Anchors (&common-variables) to ensure 100% synchronization of connection strings and Razorpay credentials across all microservices.
+  Integrated Docker Healthchecks to enforce service dependencies, ensuring Order and Payment services only start once SQL Server and RabbitMQ are fully healthy.
+
+Persistent Data Strategy:
+  Standardized the database name to OrderDb and implemented Named Volumes (sqlserver_data) to ensure order history and "Janitor" logic persist across container restarts.
+
+Background Worker Validation:
+  Verified the PaymentTimeoutWorker (Janitor Service) in a containerized environment, successfully transitioning orders from PaymentInitiated to TimedOut after the 30-minute threshold
+
 ================================================================================
 8. PROJECT ARCHITECTURE: 100% DATA INTEGRITY
 ================================================================================
@@ -231,3 +258,28 @@ Self-Healing Logic:
   Prevents database bloat from orphaned records
 
 ================================================================================
+PENDING GOALS & ROADMAP (DECEMBER 31, 2025)
+================================================================================
+
+A. ARCHITECTURAL REFACTORING (Centralizing Payment Logic):
+  • Move 'ConfirmPayment' Logic: Migrate the Razorpay signature verification and 
+    payment confirmation endpoint from Order.Service to Payment.Service.
+  • Decouple Order Service: Ensure Order.Service only updates status via 
+    internal events (PaymentCompleted) rather than direct external API calls.
+
+B. SERVICE DECOUPLING ("De-fatting" Order Service):
+  • Standalone Janitor: Extract PaymentTimeoutWorker into a dedicated 
+    [cite_start]microservice to isolate maintenance loops.
+  • Notification Service: Relocate SignalR Hubs to a separate service to 
+    [cite_start]handle real-time pushes independently.
+
+C. FRONTEND CONTAINERIZATION:
+  • Create an Nginx-based Dockerfile for the index.html UI.
+  • Integrate the UI into the docker-compose.yml for "One-Command" deployment.
+
+D. SYSTEM RESILIENCY:
+  • Implement a "Retry Payment" button in the UI for orders that have 
+    [cite_start]reached 'TimedOut' or 'Cancelled' status.
+  • Clean up EF Core background noise in logging to improve readability.
+
+  ================================================================================

@@ -74,6 +74,33 @@ builder.Services.AddHostedService<PaymentTimeoutWorker>();
 
 var app = builder.Build();
 
+// --- Database Migration Automation ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<OrderDbContext>();
+        
+        // This ensures the database exists and all tables are created.
+        // It uses the volume data if present, or creates it if missing.
+        if (context.Database.GetPendingMigrations().Any())
+        {
+            context.Database.Migrate();
+            Console.WriteLine("Database Migration: Successfully applied pending migrations.");
+        }
+        else
+        {
+            Console.WriteLine("Database Migration: Already up to date.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database Migration Error: {ex.Message}");
+    }
+}
+// -------------------------------------
+
 // 5. Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {

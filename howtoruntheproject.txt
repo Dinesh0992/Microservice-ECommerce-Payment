@@ -36,3 +36,21 @@ Open index.html in VS Code.
 Click Go Live (Bottom right status bar).
 
 Ensure the browser URL is http://127.0.0.1:5500.
+
+
+Updated as 30-Dec 
+================================================================================
+2. UPDATED STARTUP COMMANDS (DOCKER)
+================================================================================
+
+Launch entire ecosystem:
+  docker compose up -d --build
+
+View service logs:
+  docker compose logs -f
+
+Stop services (keep data):
+  docker compose down
+
+Stop services (wipe data/volumes):
+  docker compose down -v

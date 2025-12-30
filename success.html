@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Order Success</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .card { border: 1px solid #ccc; padding: 20px; display: inline-block; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>✅ Order Placed!</h1>
+        <p>Thank you for your purchase.</p>
+        <p>Order ID: <strong id="order-id"></strong></p>
+        <a href="index.html">Back to Shop</a>
+    </div>
+
+    <script>
+        // This small script grabs the ID from the URL you saw in your screenshot
+        const urlParams = new URLSearchParams(window.location.search);
+        document.getElementById('order-id').innerText = urlParams.get('orderId');
+    </script>
+</body>
+</html>
