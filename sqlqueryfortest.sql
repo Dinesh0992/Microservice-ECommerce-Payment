@@ -10,7 +10,7 @@ UNION
 select count(*) as cnt,'OutboxMessage' as tablename from OutboxMessage
 
 
-select  top 1 * from Orders ORDER BY CreatedAt desc 
+select  * from Orders ORDER BY CreatedAt desc 
 
 select  * from InboxState ORDER BY Received desc
 

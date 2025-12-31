@@ -26,6 +26,18 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
+var frontendUrl = builder.Configuration["FrontendSettings:Url"] ?? "http://127.0.0.1:5500";
+
+builder.Services.AddCors(options => {
+    options.AddDefaultPolicy(policy => {
+        policy.WithOrigins(frontendUrl) 
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
+
 var app = builder.Build();
 
 // CHANGE 2: Enable Swagger for the Payment Service
@@ -35,5 +47,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors();
 app.MapControllers();
 app.Run();

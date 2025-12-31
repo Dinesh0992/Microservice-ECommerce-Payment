@@ -59,9 +59,14 @@
     </div>
 
     <script>
-        // Use the port where your Order.Service is running (5170 based on your code)
-        const BASE_URL = "http://localhost:5170";
-        const API_URL = `${BASE_URL}/api/Orders`;
+        // 1. Define base URLs for both microservices
+        // NOTE: If using Docker, ensure Port 5030 is mapped to 8080 in docker-compose.yml
+        const ORDER_SERVICE_URL = "http://localhost:5170";
+        const PAYMENT_SERVICE_URL = "http://localhost:5030";
+
+        const API_ORDERS = `${ORDER_SERVICE_URL}/api/Orders`;
+        const API_PAYMENTS = `${PAYMENT_SERVICE_URL}/api/Payments`;
+
         const RZP_KEY = "rzp_test_RwfRliWpgJyiG6";
 
         document.getElementById('payBtn').onclick = async function () {
@@ -70,101 +75,109 @@
             const email = document.getElementById('email').value;
             const amount = document.getElementById('amount').value;
 
-            btn.disabled = true; // Prevent double clicks
+            if (!email || !amount) { alert("Please enter email and amount"); return; }
+
+            btn.disabled = true;
+            msg.style.color = "blue";
 
             try {
-                // STEP 1: Create Order in Order Service
+                // STEP 1: Create Order in Order Service (Port 5170)
                 msg.innerText = "Creating order...";
-                const res = await fetch(`${API_URL}/CreateOrder`, {
+                const res = await fetch(`${API_ORDERS}/CreateOrder`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ amount: parseFloat(amount), customerEmail: email })
                 });
 
-                // Based on your current API, this returns { orderId: ... }
+                if (!res.ok) throw new Error("Failed to create order in Order Service");
                 const { orderId } = await res.json();
 
-                // STEP 2: Initialize SignalR instead of Polling
-                msg.innerText = "Waiting for Payment Gateway...";
-
+                // STEP 2: Initialize SignalR Hub (Order Service keeps track of the connection)
+                msg.innerText = "Connecting to notification hub...";
                 const connection = new signalR.HubConnectionBuilder()
-                    .withUrl(`${BASE_URL}/orderHub`)
+                    .withUrl(`${ORDER_SERVICE_URL}/orderHub`)
                     .withAutomaticReconnect()
                     .build();
 
                 await connection.start();
-
-                // Join the group for this specific order
                 await connection.invoke("JoinOrderGroup", orderId.toString());
 
-                // STEP 3: Listen for the Push from PaymentInitiatedConsumer
+                // STEP 3: Listen for Razorpay Order ID (Created by Payment Service via RabbitMQ)
                 connection.on("UpdateRazorpayId", (razorpayId) => {
                     console.log("Received Razorpay Order ID:", razorpayId);
-                    msg.innerText = "Opening Gateway...";
+                    msg.innerText = "Opening Secure Gateway...";
 
                     const options = {
                         "key": RZP_KEY,
                         "amount": amount * 100,
                         "order_id": razorpayId,
                         "handler": async function (resp) {
-                            msg.innerText = "Verifying payment...";
+                            msg.innerText = "Verifying payment signature...";
+                            msg.style.color = "orange";
 
-                            // STEP 4: Confirm Payment
-                            const confirm = await fetch(`${API_URL}/ConfirmPayment`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    razorpayOrderId: resp.razorpay_order_id,
-                                    razorpayPaymentId: resp.razorpay_payment_id,
-                                    razorpaySignature: resp.razorpay_signature
-                                })
-                            });
+                            // STEP 4: DECOUPLED VERIFICATION - Call Payment Service (Port 5030)
+                            try {
+                                const confirm = await fetch(`${API_PAYMENTS}/ConfirmPayment`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        orderId: orderId, // The internal DB GUID
+                                        razorpayOrderId: resp.razorpay_order_id,
+                                        razorpayPaymentId: resp.razorpay_payment_id,
+                                        razorpaySignature: resp.razorpay_signature
+                                    })
+                                });
 
-                            const result = await confirm.json();
-
-                            if (confirm.ok) {
-                                // Task 2: Instead of reload, redirect to a success page
-                                // We pass the orderId in the URL so the success page can show it
-                                window.location.href = `success.html?orderId=${orderId}`;
-                            } else {
-                                alert("Verification Failed: " + result.message);
-                                location.reload();
+                                if (confirm.ok) {
+                                    const result = await confirm.json();
+                                    msg.innerText = "✅ " + result.message;
+                                    msg.style.color = "green";
+                                    // Redirect after a short delay so user sees success message
+                                    setTimeout(() => {
+                                        window.location.href = `success.html?orderId=${orderId}`;
+                                    }, 2000);
+                                } else {
+                                    const errorData = await confirm.json();
+                                    msg.innerText = "❌ Verification Failed: " + (errorData.message || "Invalid Signature");
+                                    msg.style.color = "red";
+                                    btn.disabled = false;
+                                }
+                            } catch (fetchErr) {
+                                console.error("Network Error:", fetchErr);
+                                msg.innerText = "❌ Network Error: Could not reach Payment Service at Port 5030. Check if service is running.";
+                                msg.style.color = "red";
+                                btn.disabled = false;
                             }
                         },
-                        // Task 1: Handle User Closing the Modal (The "X" button)
                         "modal": {
                             "ondismiss": async function () {
-                                console.log("Checkout form closed by user.");
                                 msg.innerText = "Payment cancelled by user.";
+                                msg.style.color = "black";
 
-                                // Notify backend to update status to 'Cancelled'
+                                // STEP 5: Notify Order Service of manual cancellation
                                 try {
-                                    await fetch(`${API_URL}/CancelOrder/${orderId}`, {
-                                        method: 'POST'
-                                    });
-                                    console.log("Order status updated to Cancelled in DB.");
+                                    await fetch(`${API_ORDERS}/CancelOrder/${orderId}`, { method: 'POST' });
                                 } catch (err) {
-                                    console.error("Failed to notify backend of cancellation:", err);
+                                    console.error("Cancelation sync failed:", err);
                                 }
 
-                                // Re-enable the button so the user can try again without refreshing
                                 btn.disabled = false;
                                 btn.innerText = "CREATE & PAY";
                             }
                         },
-                        "theme": {
-                            "color": "#3399cc"
-                        }
+                        "theme": { "color": "#3399cc" }
                     };
 
                     new Razorpay(options).open();
-                    connection.stop(); // Stop the hub after we get what we need
+                    connection.stop();
                 });
 
             } catch (e) {
+                console.error("Process Error:", e);
                 alert("Error: " + e.message);
                 btn.disabled = false;
-                msg.innerText = "";
+                msg.innerText = "Error occurred. Please try again.";
+                msg.style.color = "red";
             }
         };
     </script>

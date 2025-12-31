@@ -258,28 +258,44 @@ Self-Healing Logic:
   Prevents database bloat from orphaned records
 
 ================================================================================
-PENDING GOALS & ROADMAP (DECEMBER 31, 2025)
+UPDATED STATUS & ROADMAP (DECEMBER 31, 2025)
 ================================================================================
 
-A. ARCHITECTURAL REFACTORING (Centralizing Payment Logic):
-  • Move 'ConfirmPayment' Logic: Migrate the Razorpay signature verification and 
-    payment confirmation endpoint from Order.Service to Payment.Service.
-  • Decouple Order Service: Ensure Order.Service only updates status via 
-    internal events (PaymentCompleted) rather than direct external API calls.
+1. COMPLETED RECENTLY (TASK A: PAYMENT DECOUPLING)
+--------------------------------------------------------------------------------
+• Centralized Payment Logic: Successfully migrated Razorpay signature 
+  verification (ConfirmPayment) from Order.Service to Payment.Service.
+• Port Mapping Alignment: Configured Docker-Compose to map host port 5030 
+  to container port 8080 for modern .NET environment compatibility.
+• Event-Driven Status Updates: Order.Service now updates status to 'Paid' 
+  via MassTransit (PaymentCompletedConsumer) instead of direct API calls.
+• Frontend Orchestration: Updated index.html to communicate with Port 5170 
+  (Orders) and Port 5030 (Payments) independently.
+
+================================================================================
+PENDING GOALS & NEXT STEPS
+================================================================================
 
 B. SERVICE DECOUPLING ("De-fatting" Order Service):
   • Standalone Janitor: Extract PaymentTimeoutWorker into a dedicated 
-    [cite_start]microservice to isolate maintenance loops.
+    'Order.Janitor' microservice to isolate maintenance loops from the API.
   • Notification Service: Relocate SignalR Hubs to a separate service to 
-    [cite_start]handle real-time pushes independently.
+    handle real-time pushes independently and reduce Order Service load.
 
 C. FRONTEND CONTAINERIZATION:
-  • Create an Nginx-based Dockerfile for the index.html UI.
-  • Integrate the UI into the docker-compose.yml for "One-Command" deployment.
+  • Nginx Dockerization: Create a production-ready Nginx Dockerfile for 
+    the index.html UI.
+  • Full Orchestration: Add the UI service to docker-compose.yml to enable 
+    "One-Command" deployment for the entire stack.
 
-D. SYSTEM RESILIENCY:
-  • Implement a "Retry Payment" button in the UI for orders that have 
-    [cite_start]reached 'TimedOut' or 'Cancelled' status.
-  • Clean up EF Core background noise in logging to improve readability.
+D. SYSTEM RESILIENCY & UI IMPROVEMENTS:
+  • Payment Recovery: Implement a "Retry Payment" button in the UI for 
+    orders in 'TimedOut' or 'Cancelled' states.
+  • Log Scrubbing: Silence EF Core background noise and MassTransit 
+    telemetry in logs to highlight business logic events.
 
-  ================================================================================
+F. TIMEZONE ALIGNMENT (IST):
+  • IST Conversion: Update workers and controllers to convert UTC 
+    timestamps to Indian Standard Time (IST) for business reporting.
+
+================================================================================

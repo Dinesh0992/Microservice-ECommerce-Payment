@@ -24,8 +24,11 @@ builder.Services.AddDbContext<OrderDbContext>(x =>
 // 4. MassTransit Configuration
 builder.Services.AddMassTransit(x =>
 {
-    //tells MassTransit to look for your new consumer class and set up a queue for it.
+    // 1. Existing Consumer
     x.AddConsumer<PaymentInitiatedConsumer>();
+
+    // 2. NEW CONSUMER ADDITION: Listens for PaymentCompleted from Payment.Service
+    x.AddConsumer<PaymentCompletedConsumer>();
 
     // Configure the Entity Framework Outbox
     x.AddEntityFrameworkOutbox<OrderDbContext>(o =>
@@ -34,7 +37,7 @@ builder.Services.AddMassTransit(x =>
         o.UseBusOutbox(); 
     });
 
-    // CRITICAL ADDITION: This middleware ensures the Outbox is used for all endpoints
+    // Ensures the Outbox is used for all endpoints (including the new one)
     x.AddConfigureEndpointsCallback((context, name, cfg) =>
     {
         cfg.UseEntityFrameworkOutbox<OrderDbContext>(context);

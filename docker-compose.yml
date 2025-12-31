@@ -43,6 +43,7 @@ services:
       context: .
       dockerfile: Payment.Service/Dockerfile
     container_name: payment-service
+    ports: ["5030:8080"]
     environment:
       <<: *common-variables  # Injects the same settings here
     depends_on:
