@@ -299,3 +299,53 @@ F. TIMEZONE ALIGNMENT (IST):
     timestamps to Indian Standard Time (IST) for business reporting.
 
 ================================================================================
+================================================================================
+UPDATED STATUS & ROADMAP (JANUARY 01, 2026)
+================================================================================
+
+1. COMPLETED RECENTLY (TASK A, C & E: FULL STACK ORCHESTRATION)
+--------------------------------------------------------------------------------
+
+C. FRONTEND CONTAINERIZATION:
+  • Nginx Dockerization: Create a production-ready Nginx Dockerfile for 
+    the index.html UI.
+  • Full Orchestration: Add the UI service to docker-compose.yml to enable 
+    "One-Command" deployment for the entire stack.
+
+• Infrastructure Health Checks: Implemented advanced health checks for 
+  SQL Server and RabbitMQ to ensure the backend only starts when the 
+  internal ports are ready for traffic.
+• Persistent Data Storage: Configured named volumes (sqlserver_data, 
+  rabbitmq_data) to preserve database records and message queues across 
+  restarts.
+• Frontend Production Build: Created a multi-stage Dockerfile for the 
+  Vite-based UI, utilizing Nginx to serve optimized production assets 
+ .
+• One-Command Deployment: Successfully integrated 'ecommerce-ui' into 
+  Docker Compose on Port 5500, linking it to the shared ecommerce network 
+ .
+• Environment Synchronization: Used YAML anchors to maintain consistent 
+  connection strings and Razorpay keys across all service containers 
+ .
+
+================================================================================
+PENDING GOALS & NEXT STEPS
+================================================================================
+
+B. SERVICE DECOUPLING ("De-fatting" Order Service):
+  • Standalone Janitor: Extract PaymentTimeoutWorker into a dedicated 
+    'Order.Janitor' microservice to isolate maintenance loops from the API.
+  • Notification Service: Relocate SignalR Hubs to a separate service to 
+    handle real-time pushes independently and reduce Order Service load.
+
+D. SYSTEM RESILIENCY & UI IMPROVEMENTS:
+  • Payment Recovery: Implement a "Retry Payment" button in the UI for 
+    orders in 'TimedOut' or 'Cancelled' states.
+  • Log Scrubbing: Silence EF Core background noise and MassTransit 
+    telemetry in logs to highlight business logic events.
+
+F. TIMEZONE ALIGNMENT (IST):
+  • IST Conversion: Update workers and controllers to convert UTC 
+    timestamps to Indian Standard Time (IST) for business reporting.
+
+================================================================================

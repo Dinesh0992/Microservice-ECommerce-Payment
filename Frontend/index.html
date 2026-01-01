@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Microservices Checkout</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="box">
+            <h2>E-Commerce Checkout</h2>
+            <input type="email" id="email" placeholder="Customer Email" value="test@example.com" />
+            <input type="number" id="amount" placeholder="Amount (INR)" value="100" />
+            
+            <button id="payBtn">CREATE & PAY</button>
+            
+            <p id="msg"></p>
+        </div>
+    </div>
+    
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

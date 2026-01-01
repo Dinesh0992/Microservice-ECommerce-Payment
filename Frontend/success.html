@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Success</title>
+</head>
+<body>
+    <div id="app">
+        <div class="card">
+            <h1 style="color: #2ecc71;">✅ Order Placed!</h1>
+            <p>Thank you for your purchase. Your payment has been verified.</p>
+            <div class="order-box">
+                Order ID: <strong id="order-id">Loading...</strong>
+            </div>
+            <br />
+            <a href="/" class="back-link">Back to Shop</a>
+        </div>
+    </div>
+
+    <script type="module">
+        // Simple module to handle UI logic for success page
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('orderId');
+        if (orderId) {
+            document.getElementById('order-id').innerText = orderId;
+        }
+    </script>
+</body>
+</html>

@@ -1,54 +1,105 @@
-# Define common settings here to avoid repeating them
+# Modern Docker Compose (Version-less per latest documentation)
 x-common-variables: &common-variables
   ASPNETCORE_ENVIRONMENT: Development
   ConnectionStrings__DefaultConnection: Server=sqlserver;Database=OrderDb;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True
   RabbitMQ__Host: rabbitmq
-  Razorpay__KeyId: rzp_test_*************
-  Razorpay__KeySecret: yi***************
+  FrontendSettings__Url: http://localhost:5500
 
 services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: ecommerce-rabbitmq
-    ports: ["5672:5672", "15672:15672"]
+    ports: 
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-    volumes: ["rabbitmq_data:/var/lib/rabbitmq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ecommerce-network
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: ecommerce-sql
-    ports: ["1433:1433"]
+    ports: 
+      - "1433:1433"
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "YourStrongPassword123!"
     healthcheck:
-      test: ["CMD", "/usr/bin/timeout", "5", "/bin/bash", "-c", "</dev/tcp/localhost/1433"]
-    volumes: ["sqlserver_data:/var/opt/mssql"]
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "YourStrongPassword123!", "-Q", "SELECT 1", "-C"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - ecommerce-network
 
   order-service:
     build:
       context: .
       dockerfile: Order.Service/Dockerfile
     container_name: order-service
-    ports: ["5170:5170"]
+    restart: on-failure
+    ports: 
+      - "5170:5170"
     environment:
-      <<: *common-variables  # Injects all the settings once
+      <<: *common-variables
     depends_on:
-      rabbitmq: { condition: service_healthy }
-      sqlserver: { condition: service_healthy }
+      rabbitmq:
+        condition: service_healthy
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
 
   payment-service:
     build:
       context: .
       dockerfile: Payment.Service/Dockerfile
     container_name: payment-service
-    ports: ["5030:8080"]
+    restart: on-failure
+    ports: 
+      - "5030:8080"
     environment:
-      <<: *common-variables  # Injects the same settings here
+      <<: *common-variables
+      RazorPay__KeyId: rzp_test_***********
+      RazorPay__KeySecret: yi***************8
     depends_on:
-      rabbitmq: { condition: service_healthy }
-      sqlserver: { condition: service_healthy }
+      rabbitmq:
+        condition: service_healthy
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+
+  ecommerce-ui:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: ecommerce-ui
+    ports:
+      - "5500:80"
+    environment:
+      - VITE_ORDER_SERVICE_URL=http://localhost:5170
+      - VITE_PAYMENT_SERVICE_URL=http://localhost:5030
+      - VITE_RAZORPAY_KEY_ID=rzp_test_RwfRliWpgJyiG6
+      - VITE_ORDER_HUB_URL=http://localhost:5170/orderHub
+    restart: always
+    depends_on:
+      order-service:
+        condition: service_started
+    networks:
+      - ecommerce-network
+
+networks:
+  ecommerce-network:
+    driver: bridge
 
 volumes:
   rabbitmq_data:
